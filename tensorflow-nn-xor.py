@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Demo项目，神经网络拟合异或。
+"""
 import tensorflow as tf
 from tensorflow.keras import *
 import matplotlib.pyplot as pyp
@@ -25,6 +30,6 @@ print('\033[34m')  # 控制台换成蓝色
 history = model.fit(x, y, epochs=10000, verbose=0, callbacks=[haltCallback()])
 lost = history.history['loss']  # 获取损失
 print(model.summary(), '\033[0m')  # 打印网络，可以看到刚才插入的层
-print('\033[32m', model.call(x), '\033[0m')
+print('\033[32m', model.predict(x), '\033[0m')
 pyp.plot(lost)  # 绘制图表
 pyp.show()  # 显示图表
