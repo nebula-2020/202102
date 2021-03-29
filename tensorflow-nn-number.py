@@ -11,7 +11,8 @@ from tensorflow.keras.layers import *
 from threading import *
 import winsound
 import time
-
+np.set_printoptions(threshold=np.inf)
+np.set_printoptions(suppress=True)
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 OUTPUT_SCALE = 10
 DATA_ROOT = './data/nums/'
@@ -206,11 +207,25 @@ def out(name: str, path: str, file_name: str):
                 tmp = np.floor(tf.multiply(bitmap, 255).numpy())
                 img = tf.convert_to_tensor(tmp, dtype='uint8')
                 img = tf.image.encode_png(img, compression=3)
-                fp = path+file_name+str(i)+'-'+str(index)+'-'+'.png'
+                fp = path+file_name+str(i)+'-'+str(index)+'.png'
                 with tf.io.gfile.GFile(fp, 'wb') as file:
                     file.write(img.numpy())
     except:
-        print(output.numpy())
+        length, width = output.shape
+        for i in range(length):
+            bitmap = []
+            line = []
+            for x in range(len(output[i])):
+                pixel = [output[i, x]]*3
+                line.append(pixel)
+            bitmap.append(line)
+            bitmap = tf.convert_to_tensor(bitmap)
+            tmp = np.floor(tf.multiply(bitmap, 255).numpy())
+            img = tf.convert_to_tensor(tmp, dtype='uint8')
+            img = tf.image.encode_png(img, compression=3)
+            fp = path+file_name+str(i)+'.png'
+            with tf.io.gfile.GFile(fp, 'wb') as file:
+                file.write(img.numpy())
 
 
 # LeNet结构
@@ -244,7 +259,7 @@ while True:
 
     t = beep()
     print('CONTINUE? (y/n) ', end='')
-    t.join()
     if str.lower(input()) == 'n':
         break
+    t.join()
 print('END.')
