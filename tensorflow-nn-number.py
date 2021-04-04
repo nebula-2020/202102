@@ -14,8 +14,8 @@ import time
 np.set_printoptions(threshold=np.inf)
 np.set_printoptions(suppress=True)
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+DATA_ROOT = './data/letnet5/'
 OUTPUT_SCALE = 10
-DATA_ROOT = './data/nums/'
 X = 'x'
 Y = 'y'
 NAME = 'name'
@@ -85,7 +85,8 @@ class readThread (Thread):
 def load_data(root, convert_to_tensor=True):
     treads = []
     for v in range(OUTPUT_SCALE):
-        treads.append(readThread("%s%s" % (root, str(v)), v))
+        path = os.path.join(root, str(v))
+        treads.append(readThread(path, v))
         pass
     for v in range(OUTPUT_SCALE):
         print('\033[31m'+'START TREAD: ' + str(v) + '\033[0m')
@@ -113,9 +114,10 @@ def load_data(root, convert_to_tensor=True):
         return res_x, res_y, res_n
 
 
-x, y, names = load_data(DATA_ROOT)
+x, y, names = load_data(os.path.join(DATA_ROOT, 'nums'))
 
-x_t, y_t, name_t = load_data('./data/num-tests/', convert_to_tensor=False)
+x_t, y_t, name_t = load_data(os.path.join(
+    DATA_ROOT, 'num-tests'), convert_to_tensor=False)
 x_t = tf.convert_to_tensor(x_t)
 
 
@@ -250,12 +252,12 @@ while True:
     print('\033[34m')
     print(model.summary(), '\033[0m', '\n')
 
-    out('Conv_1', './data/conv_1/', '')
-    out('Conv_2', './data/conv_2/', '')
-    out('MaxPool_1', './data/mp_1/', '')
-    out('MaxPool_2', './data/mp_2/', '')
-    out('Dense_1', './data/dense_1/', '')
-    out('Dense_2', './data/dense_2/', '')
+    out('Conv_1', os.path.join(DATA_ROOT, 'conv_1'), '')
+    out('Conv_2',  os.path.join(DATA_ROOT, 'conv_2'), '')
+    out('MaxPool_1', os.path.join(DATA_ROOT, 'mp_1'), '')
+    out('MaxPool_2', os.path.join(DATA_ROOT, 'mp_2'), '')
+    out('Dense_1',  os.path.join(DATA_ROOT, 'dense_1'), '')
+    out('Dense_2',  os.path.join(DATA_ROOT, 'dense_2'), '')
 
     t = beep()
     print('CONTINUE? (y/n) ', end='')
