@@ -229,12 +229,12 @@ def out(name: str, path: str, file_name: str):
 
 
 # LeNet结构
-layers = [Conv2D(filters=20, kernel_size=(5, 5), strides=1, activation='tanh', padding='same', name="Conv_1"),
-          MaxPool2D(data_format='channels_last', strides=2,
+layers = [Conv2D(filters=20, kernel_size=(5, 5), strides=1, activation='relu', padding='same', name="Conv_1"),
+          AvgPool2D(data_format='channels_last', strides=2,
                     pool_size=(2, 2), name="MaxPool_1"),
           Conv2D(filters=50, kernel_size=(5, 5), strides=1,
-                 activation='tanh', padding='same', name="Conv_2"),
-          MaxPool2D(data_format='channels_last', strides=2,
+                 activation='relu', padding='same', name="Conv_2"),
+          AvgPool2D(data_format='channels_last', strides=2,
                     pool_size=(2, 2), name="MaxPool_2"),
           layers.Flatten(),
           Dense(units=500, activation='relu', name="Dense_1"),
