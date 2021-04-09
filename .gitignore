@@ -134,3 +134,4 @@ dmypy.json
 # custom
 data/
 .py
+MNIST_data/
