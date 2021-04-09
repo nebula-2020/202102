@@ -9,8 +9,37 @@ import tensorflow as tf
 from tensorflow.keras import *
 from tensorflow.keras.layers import *
 from threading import *
-import winsound
-import time
+from util import beep
+from tensorflow.examples.tutorials.mnist import input_data
+mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
+
+
+def read_mnist(data, convert_to_tensor=True):
+    SOURCE_DATA_WIDTH = 784
+    TARGET_DATA_WIDTH = 28
+    data_size = data.num_examples
+    x = [None]*data_size
+    y = [None]*data_size
+    names = [None]*data_size
+    for i in range(data_size):
+        read = data.images[i]
+        label = data.labels[i]
+        img = []
+        for line_h in range(0, SOURCE_DATA_WIDTH, TARGET_DATA_WIDTH):
+            line = []
+            for e in read[line_h:line_h+TARGET_DATA_WIDTH]:
+                line.append([e])
+            img.append(line)
+        x[i] = img
+        y[i] = label
+        names[i] = '%s-%s' % (hex(i), str(label.tolist().index(1.)))
+    if convert_to_tensor:
+        x = tf.convert_to_tensor(x)
+        y = tf.convert_to_tensor(y)
+        names = tf.convert_to_tensor(names)
+    return x, y, names
+
+
 np.set_printoptions(threshold=np.inf)
 np.set_printoptions(suppress=True)
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -34,91 +63,12 @@ def find_max(v: list):
     return mi, m
 
 
-def beeps():
-    for i in range(3):
-        winsound.Beep(5000, 1000)
-        time.sleep(.6)
+x, y, names = read_mnist(mnist.train)
 
+x_t, y_t, name_t = read_mnist(
+    mnist.validation, convert_to_tensor=False)
 
-def beep():
-    t = Thread(target=beeps)
-    t.start()
-    return t
-
-
-def read_data(path, v: int):
-    image_raw = tf.io.gfile.GFile(path, 'rb').read()
-    img = tf.image.decode_png(image_raw, channels=1)
-    img = tf.cast(img, tf.float32)/255.
-    li = [0.]*OUTPUT_SCALE
-    li[v] = 1.
-    return {X: img, Y: li, NAME: path}
-
-
-class readThread (Thread):
-    def __init__(self, folder, index):
-        Thread.__init__(self)
-        self.folder = folder
-        self.index = index
-        self.data = []
-        self.data_size = 0
-
-    def run(self):
-        print("START: "+str(self.index))
-        global x, y
-        for root, ds, fs in os.walk(self.folder):
-            for f in fs:
-                file_path = os.path.join(root, f)
-                if file_path.endswith('.png'):
-                    self.data.append(read_data(file_path, self.index))
-        print('JOIN: '+str(self.index))
-        self.data_size = len(self.data)
-        pass
-
-    def get_one(self, index: int):
-        if abs(index) >= self.data_size:
-            return None
-        else:
-            return self.data[abs(index)]
-
-
-def load_data(root, convert_to_tensor=True):
-    treads = []
-    for v in range(OUTPUT_SCALE):
-        path = os.path.join(root, str(v))
-        treads.append(readThread(path, v))
-        pass
-    for v in range(OUTPUT_SCALE):
-        print('\033[31m'+'START TREAD: ' + str(v) + '\033[0m')
-        treads[v].start()
-        pass
-    for v in range(OUTPUT_SCALE):
-        treads[v].join()
-        pass
-    res_x = []
-    res_y = []
-    res_n = []
-    max_size = 0
-    for v in range(OUTPUT_SCALE):
-        max_size = max(max_size, treads[v].data_size)
-    for i in range(max_size):
-        for v in range(OUTPUT_SCALE):
-            d = treads[v].get_one(i)
-            if d is not None:
-                res_x.append(d[X])
-                res_y.append(d[Y])
-                res_n.append(d[NAME])
-    if convert_to_tensor:
-        return tf.convert_to_tensor(res_x), tf.convert_to_tensor(res_y), tf.convert_to_tensor(res_n)
-    else:
-        return res_x, res_y, res_n
-
-
-x, y, names = load_data(os.path.join(DATA_ROOT, 'nums'))
-
-x_t, y_t, name_t = load_data(os.path.join(
-    DATA_ROOT, 'num-tests'), convert_to_tensor=False)
-x_t = tf.convert_to_tensor(x_t)
+x_t = tf.convert_to_tensor(x_t[30:])
 
 
 class haltCallback(callbacks.Callback):
@@ -159,7 +109,7 @@ class haltCallback(callbacks.Callback):
 
 
 def create_opt():
-    t = beep()
+    t = beep.beep()
     while True:
         try:
             print('LEARNING RATE: ', end='')
@@ -209,7 +159,9 @@ def out(name: str, path: str, file_name: str):
                 tmp = np.floor(tf.multiply(bitmap, 255).numpy())
                 img = tf.convert_to_tensor(tmp, dtype='uint8')
                 img = tf.image.encode_png(img, compression=3)
-                fp = path+file_name+str(i)+'-'+str(index)+'.png'
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                fp = os.path.join(path, file_name+str(i)+'-'+str(index)+'.png')
                 with tf.io.gfile.GFile(fp, 'wb') as file:
                     file.write(img.numpy())
     except:
@@ -259,7 +211,7 @@ while True:
     out('Dense_1',  os.path.join(DATA_ROOT, 'dense_1'), '')
     out('Dense_2',  os.path.join(DATA_ROOT, 'dense_2'), '')
 
-    t = beep()
+    t = beep.beep()
     print('CONTINUE? (y/n) ', end='')
     if str.lower(input()) == 'n':
         break
