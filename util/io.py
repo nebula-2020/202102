@@ -8,6 +8,38 @@ import re
 from threading import *
 import tensorflow as tf
 import traceback
+from tensorflow.examples.tutorials import mnist
+
+
+def read_mnist(size=None):
+    data = mnist.input_data.read_data_sets('MNIST_data', one_hot=True).train
+    SOURCE_DATA_WIDTH = 784
+    TARGET_DATA_WIDTH = 28
+    data_size = data.num_examples
+    x = [None]*data_size
+    y = [None]*data_size
+    names = [None]*data_size
+    for i in range(data_size):
+        read = data.images[i]
+        label = data.labels[i]
+        img = []
+        for line_h in range(0, SOURCE_DATA_WIDTH, TARGET_DATA_WIDTH):
+            line = []
+            for e in read[line_h:line_h+TARGET_DATA_WIDTH]:
+                line.append([e])
+            img.append(line)
+        x[i] = img
+        y[i] = label
+        names[i] = '%s-%s' % (hex(i), str(label.tolist().index(1.)))
+    if size is not None:
+        x = tf.convert_to_tensor(x[:size])
+        y = tf.convert_to_tensor(y[:size])
+        names = tf.convert_to_tensor(names[:size])
+    else:
+        x = tf.convert_to_tensor(x)
+        y = tf.convert_to_tensor(y)
+        names = tf.convert_to_tensor(names)
+    return x, y, names
 
 
 class Reader (Thread):
