@@ -5,6 +5,7 @@ Demo项目，神经网络拟合224x224的1000个常用汉字字样的图片。
 """
 import random
 import time
+import os
 import traceback
 from threading import *
 
@@ -16,16 +17,53 @@ from tensorflow.keras import *
 from tensorflow.keras.layers import *
 
 from util import beep
-from util import wordch
-from util.cnn import NETWORK
-
+from util import wordch, network
+pyp.figure(figsize=(8, 8))
+pyp.rcParams['font.sans-serif'] = ['simhei']
 np.set_printoptions(threshold=np.inf)
 
 
-def create_img(string, font_name: str = 'simsun.ttc', width=224, height=224, font_size=140, random_location=True):
-    min_persent = .75
-    max_persent = .85
-    offset = max(1, int(width*.1))
+def print_img(show=False):
+    if not os.path.exists(IMG_PATH):
+        os.makedirs(IMG_PATH)
+    imgs = []
+    labels = []
+    LEN = 12
+    x_t, y_t, n_t = create_data(random.sample(
+        wordch.WORDS, LEN), wordch.FONTS, times=1)
+    for i in range(int(LEN)):
+        test = tf.convert_to_tensor([x_t[i]])
+        o = model.predict(test)
+        imgs.append(o)
+        labels.append(n_t[i])
+        imgs.append(y_t[i])
+        labels.append(n_t[i])
+    for i in range(LEN*2):
+        pyp.subplot(4, int(LEN/2), i+1)
+        pyp.imshow(tf.reshape([imgs[i]], (14, 14)))
+        pyp.xticks([])
+        pyp.yticks([])
+        pyp.title(labels[i])
+        pyp.axis('off')
+    pyp.savefig(
+        os.path.join(
+            IMG_PATH,
+            '%s_%s_%s.png' % (
+                NETWORK_NAME,
+                str(time.strftime(r"%Y-%m-%d-%H-%M-%S", time.localtime())),
+                str(hex(random.randint(0, 255))[2:])
+            )
+        )
+    )
+    if show:
+        beep.beep()
+        pyp.show()
+
+
+def create_img(string, font_name: str = 'simsun.ttc', width=224, height=224, font_size=300, random_location=True):
+    min_persent = .9
+    max_persent = 1.15
+    offset = max(1, int(width*.05))
     safe = 5
     while True:
         try:
@@ -85,7 +123,9 @@ def list_simmilarity(y: list, y_hat: list):
     l1 = len(y)
     l2 = len(y_hat)
     if l1 != l2:
-        raise ValueError('The lists must have the same length.')
+        raise ValueError(
+            'The lists must have the same length: %d != %d' % (l1, l2)
+        )
     ret = 0
     total = 0.
     for i in range(l1):
@@ -159,67 +199,86 @@ def create_data(words: list, fonts: list, times=5, parallel=50):
     return x, y, n
 
 
-NETWORK_NAME = 'resnet'
-MODEL_NAME = '/'.join(['data', NETWORK_NAME])
-COUNT_MAX = 25
+NETWORK = [
+    Input(shape=(112, 112, 1)),
+    Conv2D(filters=64, kernel_size=(3, 3), padding='SAME', strides=1,
+           activation=tf.nn.relu,
+           name='Conv2D-1-1'),
+    Conv2D(filters=64, kernel_size=(3, 3), padding='SAME', strides=1,
+           activation=tf.nn.relu,
+           name='Conv2D-1-2'),
+    MaxPool2D(pool_size=(2, 2), strides=2, padding='SAME', name='Pool-1'),
+    Conv2D(filters=128, kernel_size=(3, 3), padding='SAME', strides=1,
+           activation=tf.nn.relu, name='Conv2D-2-1'),
+    Conv2D(filters=128, kernel_size=(1, 1), padding='SAME', strides=1,
+           activation=tf.nn.relu, name='Conv2D-2-2'),
+    MaxPool2D(pool_size=(2, 2), strides=2, padding='SAME', name='Pool-2'),
+    Conv2D(filters=256, kernel_size=(3, 3), padding='SAME', strides=1,
+           activation=tf.nn.relu,
+           name='Conv2D-3-1'),
+    Conv2D(filters=256, kernel_size=(3, 3), padding='SAME', strides=1,
+           activation=tf.nn.relu,
+           name='Conv2D-3-2'),
+    Conv2D(filters=256, kernel_size=(1, 1), padding='SAME', strides=1,
+           activation=tf.nn.relu,
+           name='Conv2D-3-3'),
+    MaxPool2D(pool_size=(2, 2), strides=2, padding='SAME', name='Pool-3'),
+    Conv2D(filters=256, kernel_size=(3, 3), padding='SAME', strides=1,
+           activation=tf.nn.relu,
+           name='Conv2D-4-1'),
+    Conv2D(filters=256, kernel_size=(3, 3), padding='SAME', strides=1,
+           activation=tf.nn.relu,
+           name='Conv2D-4-2'),
+    Conv2D(filters=256, kernel_size=(1, 1), padding='SAME', strides=1,
+           activation=tf.nn.relu,
+           name='Conv2D-4-3'),
+    MaxPool2D(pool_size=(2, 2), strides=2, padding='SAME', name='Pool-4'),
+    Flatten(),
+    Dense(units=196, activation=tf.nn.sigmoid, name='Dense-1'),
+    # 1x1x196
+]
+model = Sequential(NETWORK)
+NETWORK_NAME = 'chinese'
+MODEL_NAME = os.path.join('data', NETWORK_NAME)
+IMG_PATH = os.path.join(MODEL_NAME, 'img')
+PRINT_DELAY = 100
 TAR_ACC = 0.9
-TRAIN_SCALE = 300
-TEST_SCALE = 7
-x, y, _ = create_data(random.sample(wordch.WORDS, TRAIN_SCALE), wordch.FONTS)
-x_t, y_t, n_t = create_data(random.sample(
-    wordch.WORDS, TEST_SCALE), wordch.FONTS, times=1)
-
-network = NETWORK[NETWORK_NAME]
-model = Sequential(network)
-count = -1
+TRAIN_SCALE = 12
+x, y, _ = create_data(random.sample(wordch.WORDS, min(
+    TRAIN_SCALE, len(wordch.WORDS))), wordch.FONTS)
 
 
 class haltCallback(callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs={}):
-        global TAR_LOSS, x_t, y_t, n_t, count
+        global x_t, y_t, n_t, count
         acc = logs.get('accuracy')
-        if count > COUNT_MAX or count < 0:
-            count = 0
-            result = model.predict(x_t)
-            print(flist2str(np.resize(result[0], (14, 14)).tolist()))
-            for row_i in range(len(result)):
-                row = result[row_i]
-                for yi in range(len(y_t)):
-                    sim = list_simmilarity(y_t[yi], row)
-                    if yi == row_i:
-                        if sim > .9:
-                            s = '\033[32m%s: %.7f\033[0m'
-                        else:
-                            s = '\033[31m%s: %.7f\033[0m'
-                    else:
-                        s = '%s: %.7f'
-                    s = s % (n_t[yi], sim)
-                    print(s, end='\t')  # n_t[row_i]
-                print('')
+        if epoch % PRINT_DELAY == 0:
+            print_img()
             lo = logs.get('loss')
             print('\033[34mLOST: %.15f, ACCURACY: %.15f\033[0m' % (lo, acc))
-        else:
-            count += 1
         if(acc >= TAR_ACC):
             self.model.stop_training = True
 
 
 print('NOW START TRAINING.')
+opt = tf.optimizers.Adadelta(learning_rate=.001)
 try:
     model = tf.keras.models.load_model(MODEL_NAME)
 except:
     # opt = tf.optimizers.SGD(lr=.1, momentum=.25)
-    opt = tf.optimizers.Adadelta(learning_rate=.05)
-    model.compile(optimizer=opt, loss='binary_crossentropy',
-                  metrics=['accuracy'])
-history = model.fit(x, y, epochs=100, verbose=1, callbacks=[haltCallback()])
+    model.compile(
+        optimizer=opt,
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+    model.build(input_shape=(1, 112, 112, 1))
+    model.summary()
+history = model.fit(x, y, epochs=5000, verbose=1, callbacks=[haltCallback()])
 model.save(MODEL_NAME)
 model.summary()
 lost = history.history['loss']
 acc = history.history['accuracy']
 pyp.plot(lost, color='red', label='loss')
 pyp.plot(acc, color='blue', label='accuracy')
-pyp.legend()
-beep()
-pyp.show()  # 显示图表
+print_img(True)  # 显示图表
