@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Demo项目，神经网络拟合异或。
+神经网络拟合异或。
+Python 3.8.5
+tensorflow 2.3.0
 """
 import tensorflow as tf
 from tensorflow.keras import *

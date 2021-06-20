@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Demo项目，神经网络拟合异或。
+神经网络拟合异或。
+Python 3.8.5
+numpy 1.19.2
 """
 import numpy as np
 import matplotlib.pyplot as pyp
@@ -156,51 +158,52 @@ data_outputs = [[1], [0], [1], [0]]
 
 data_size = len(data_inputs)
 weights = init_weights(2, 3, 1)
-print('\033[31m', '训练前权值：', '\033[0m', weights)
-depth = len(weights)
-result = {LOST: [], START: None, END: []}
-delta_weight_save = [0]*depth  # 动量因子
-for t in range(TIMES):
-    delta_weights = []
-    res = []
-    for data_index in range(data_size):  # 拟合每一组数据
-        data = {INPUT: np.mat([data_inputs[data_index]]).T,
-                EXPECT: np.mat([data_outputs[data_index]]).T}
-        fit_res = fit(data, weights)
+if __name__ == '__main__':
+    print('\033[31m', '训练前权值：', '\033[0m', weights)
+    depth = len(weights)
+    result = {LOST: [], START: None, END: []}
+    delta_weight_save = [0]*depth  # 动量因子
+    for t in range(TIMES):
+        delta_weights = []
+        res = []
+        for data_index in range(data_size):  # 拟合每一组数据
+            data = {INPUT: np.mat([data_inputs[data_index]]).T,
+                    EXPECT: np.mat([data_outputs[data_index]]).T}
+            fit_res = fit(data, weights)
 
-        delta_weights.append(fit_res[WEIGHT])
-        res.append(fit_res[OUTPUT].T.tolist()[0])  # 之后res就不参加运算了
-        pass
-
-    if result[START] is None:  # 存储神经网络输出以供打印
-        result[START] = res
-    result[END] = res
-
-    lost = loss(np.mat(res).T, np.mat(data_outputs).T)
-    result[LOST].append(np.dot(1/data_size, lost))
-
-    if result[LOST][-1] <= BREAK:
-        break
-
-    for layerIndex in range(depth):
-        if delta_weight_save is not None:
-            weights[layerIndex] += ALPHA * delta_weight_save[layerIndex]
+            delta_weights.append(fit_res[WEIGHT])
+            res.append(fit_res[OUTPUT].T.tolist()[0])  # 之后res就不参加运算了
             pass
 
-        # 重新设置动量因子
-        delta_weight_save[layerIndex] = np.zeros(weights[layerIndex].shape)
+        if result[START] is None:  # 存储神经网络输出以供打印
+            result[START] = res
+        result[END] = res
 
-        for delta_weight in delta_weights:
-            delta_weight = np.dot(ETA, delta_weight[layerIndex])
-            weights[layerIndex] -= delta_weight  # 更新权值和乘学习率
-            delta_weight_save[layerIndex] -= delta_weight  # 设置动量因子
+        lost = loss(np.mat(res).T, np.mat(data_outputs).T)
+        result[LOST].append(np.dot(1/data_size, lost))
+
+        if result[LOST][-1] <= BREAK:
+            break
+
+        for layerIndex in range(depth):
+            if delta_weight_save is not None:
+                weights[layerIndex] += ALPHA * delta_weight_save[layerIndex]
+                pass
+
+            # 重新设置动量因子
+            delta_weight_save[layerIndex] = np.zeros(weights[layerIndex].shape)
+
+            for delta_weight in delta_weights:
+                delta_weight = np.dot(ETA, delta_weight[layerIndex])
+                weights[layerIndex] -= delta_weight  # 更新权值和乘学习率
+                delta_weight_save[layerIndex] -= delta_weight  # 设置动量因子
+                pass
             pass
         pass
-    pass
 
-print('\033[31m', '训练前输出：', np.mat(result[START]).T, '\033[0m')
+    print('\033[31m', '训练前输出：', np.mat(result[START]).T, '\033[0m')
 
-print('\033[35m', '训练后权值：', '\033[0m', weights)
-print('\033[35m', '训练后输出：', np.mat(result[END]).T, '\033[0m')
-pyp.plot(result[LOST])
-pyp.show()
+    print('\033[35m', '训练后权值：', '\033[0m', weights)
+    print('\033[35m', '训练后输出：', np.mat(result[END]).T, '\033[0m')
+    pyp.plot(result[LOST])
+    pyp.show()
